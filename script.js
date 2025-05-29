@@ -12,10 +12,9 @@ fetch(url, {
     const films = data.record;
     const filmList = document.getElementById('film-list');
 
-    films.forEach(film => {
+    films.forEach((film, index) => {
       const card = document.createElement('div');
       card.className = 'film-card';
-      if (film.seen) card.classList.add('seen');
 
       const img = document.createElement('img');
       img.src = film.image;
@@ -23,31 +22,62 @@ fetch(url, {
 
       const overlay = document.createElement('div');
       overlay.className = 'overlay';
+      overlay.textContent = '✓';
 
       const link = document.createElement('a');
       link.href = film.csfd;
       link.target = '_blank';
       link.textContent = film.title;
 
-      const label = document.createElement('label');
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.checked = film.seen;
+      const list = document.createElement('ul');
+      list.className = 'seen-list';
 
-      checkbox.addEventListener('change', () => {
-        film.seen = checkbox.checked;
-        card.classList.toggle('seen', checkbox.checked);
-        updateData(films);
+      (film.seenBy || []).forEach(entry => {
+        const li = document.createElement('li');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = entry.seen;
+        checkbox.disabled = true;
+
+        li.textContent = entry.name + ' ';
+        li.prepend(checkbox);
+        list.appendChild(li);
       });
 
-      label.appendChild(checkbox);
-      label.appendChild(document.createTextNode('Viděno'));
+      const nameInput = document.createElement('input');
+      nameInput.placeholder = 'Tvé jméno';
+      nameInput.className = 'name-input';
+
+      const seenCheckbox = document.createElement('input');
+      seenCheckbox.type = 'checkbox';
+
+      const submitBtn = document.createElement('button');
+      submitBtn.textContent = 'Přidat';
+
+      submitBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (!name) return;
+
+        const newEntry = { name: name, seen: seenCheckbox.checked };
+        film.seenBy = film.seenBy || [];
+        film.seenBy.push(newEntry);
+
+        updateData(films);
+      });
 
       card.appendChild(img);
       card.appendChild(overlay);
       card.appendChild(link);
-      card.appendChild(label);
+      card.appendChild(list);
+      card.appendChild(nameInput);
+      card.appendChild(seenCheckbox);
+      card.appendChild(submitBtn);
       filmList.appendChild(card);
+
+      // Zobraz overlay pokud někdo viděl
+      if ((film.seenBy || []).some(e => e.seen)) {
+        card.classList.add('seen');
+      }
     });
   })
   .catch(error => console.error('Chyba při načítání dat:', error));
@@ -63,6 +93,6 @@ function updateData(films) {
     body: JSON.stringify(films)
   })
     .then(response => response.json())
-    .then(data => console.log('Data byla aktualizována:', data))
+    .then(data => location.reload()) // Obnoví stránku, aby se nový záznam zobrazil
     .catch(error => console.error('Chyba při aktualizaci dat:', error));
 }
